@@ -1,12 +1,76 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 import json
+
+from django.views.decorators.csrf import csrf_exempt
+
 from s3_wrapper import S3Utils
+from django import forms
+from datetime import datetime
 
 
+class DecodeForm(forms.Form):
+    data = forms.CharField(max_length=100)
+
+    def clean_data(self):
+        data = self.cleaned_data['data']
+        data = decode_string(data)
+        return data
+
+
+class EncodeForm(forms.Form):
+    data = forms.CharField(max_length=100)
+
+    def clean_data(self):
+        data = self.cleaned_data['data']
+        data = encode_string(data)
+        return data
+
+
+def encode_string(data):
+    return data[::-1]
+
+
+def decode_string(data):
+    return data[::-1]
+
+
+@csrf_exempt
 def encoder_view(request):
-    do_encode_test()
-    return HttpResponse('boom')
+    if request.method == 'POST':
+        form = EncodeForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data['data']
+            now_key = str(datetime.now())[-4:]
+            save_data(data=data, key=now_key)
+            return HttpResponse(now_key)
+        return HttpResponse('nok post')
+    if request.method == 'GET':
+        key = request.GET.get('key')
+        data = load_data(key=key)
+        raw_data = json.loads(data)
+        decoded_data = decode_string(raw_data.get('message'))
+        return HttpResponse(decoded_data)
+    return HttpResponse('nok')
+
+
+def save_data(bucket_name='zappa-encode', key='key', data='boom!'):
+    now = datetime.now()
+    data = {
+        'message': data,
+        'created_at': str(now)
+    }
+    formatted_data = json.dumps(data)
+    s3 = S3Utils()
+    s3.set_default_bucket(bucket_name=bucket_name)
+    s3.create_object(key=key, content=formatted_data, bucket_name=bucket_name)
+
+
+def load_data(bucket_name='zappa-encode', key='key'):
+    s3 = S3Utils()
+    s3.set_default_bucket(bucket_name=bucket_name)
+    data = s3.get_object(key=key)
+    return data
 
 
 def do_encode_test():

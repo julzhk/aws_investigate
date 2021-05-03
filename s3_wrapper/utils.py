@@ -1,4 +1,5 @@
 import os
+from io import BytesIO
 
 from typing import Any
 
@@ -89,10 +90,14 @@ class S3Utils(object):
         bucket_name = self.get_bucket_name(bucket_name)
         self._s3_client.download_file(bucket_name, key, file_path)
 
-
     def download_write_to_file(self, key: str, file_io=None, bucket_name: str = None):
         bucket_name = self.get_bucket_name(bucket_name)
         self._s3_client.download_fileobj(bucket_name, key, file_io)
+
+    def get_object(self,key):
+        file = BytesIO()
+        self.download_write_to_file(key=key, file_io=file)
+        return file.getvalue()
 
     def file_exists(self, key: str, bucket_name: str = None) -> bool:
         bucket_name = self.get_bucket_name(bucket_name)

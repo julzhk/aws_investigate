@@ -5,7 +5,7 @@ from s3_wrapper import S3Utils
 from io import BytesIO, StringIO
 import uuid
 
-LOCAL_TEST = True
+LOCAL_TEST = False
 
 if LOCAL_TEST:
     import localstack_client.session as boto3
