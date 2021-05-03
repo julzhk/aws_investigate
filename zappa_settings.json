@@ -1,0 +1,11 @@
+{
+  "dev": {
+    "django_settings": "encode_zap.encode_zap.settings",
+    "profile_name": "default",
+    "project_name": "aws-investigate",
+    "runtime": "python3.8",
+    "s3_bucket": "zappa-encode",
+    "aws_region": "eu-west-2",
+    "use_precompiled_packages": false,
+  }
+}
