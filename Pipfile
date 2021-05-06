@@ -42,6 +42,8 @@ wsgi-request-logger = "==0.4.6"
 zappa = "==0.52.0"
 PyYAML = "==5.4.1"
 Werkzeug = "==0.16.1"
+jupyter = "*"
+pycryptodome = "*"
 
 [dev-packages]
 
