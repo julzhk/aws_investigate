@@ -54,6 +54,13 @@ def encoder_view(request):
     return HttpResponse('nok')
 
 
+def get_from_datastore(key):
+    data = load_data(key=key)
+    raw_data = json.loads(data)
+    decoded_data = decode_string(raw_data.get('message'))
+    return decoded_data
+
+
 def save_data(bucket_name='zappa-encode', key='key', data='boom!'):
     now = datetime.now()
     data = {
