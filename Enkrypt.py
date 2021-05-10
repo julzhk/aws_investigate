@@ -23,6 +23,11 @@ class EncryptorBase:
         self.output_filename = output_filename
         self.input_filename = input_filename
 
+    def read_file_in(self, file_in):
+        self.salt = file_in.read(self.SALT_LENGTH)  # The salt we generated was 32 bits long
+        nonce = file_in.read(self.NONCE_LENGTH)
+        self.cipher = AES.new(self.key, AES.MODE_GCM, nonce=nonce)
+
 
 class Encryptor(EncryptorBase):
 
@@ -47,33 +52,28 @@ class Encryptor(EncryptorBase):
             self.write_body(file_in, file_out)
             self.write_footer(file_out)
 
-    def read_file_in(self, file_in):
-        self.salt = file_in.read(self.SALT_LENGTH)  # The salt we generated was 32 bits long
-        nonce = file_in.read(self.NONCE_LENGTH)
-        self.cipher = AES.new(self.key, AES.MODE_GCM, nonce=nonce)
-
 
 class Dcryptor(EncryptorBase):
 
-    def read_file_in(self, file_in):
-        self.salt = file_in.read(self.SALT_LENGTH)  # The salt we generated was 32 bits long
-        nonce = file_in.read(self.NONCE_LENGTH)
-        self.cipher = AES.new(self.key, AES.MODE_GCM, nonce=nonce)
+    def __init__(self):
+        super(Dcryptor, self).__init__()
+        self.file_in_size = os.path.getsize(self.input_filename)
+        self.encrypted_data_size = self.file_in_size - self.SALT_LENGTH - self.NONCE_LENGTH - self.TAG_LENGTH
+
 
     def verify(self, file_in):
-        # Verify encrypted file is correct
+        # Verify encrypted file is correct; assume we seek to the location of the tag
         tag = file_in.read(self.TAG_LENGTH)
         self.cipher.verify(tag)
 
     def read_and_output(self, file_in, file_out):
-        file_in_size = os.path.getsize(self.input_filename)
-        # Total - salt - nonce - tag = encrypted data
-        encrypted_data_size = file_in_size - self.SALT_LENGTH - self.NONCE_LENGTH - self.TAG_LENGTH
-        # Read, decrypt and write out the data
-        for chunk_size in RangeAndRemainder(encrypted_data_size, self.BUFFER_SIZE):
-            data = file_in.read(chunk_size)
-            decrypted_data = self.cipher.decrypt(data)
-            file_out.write(decrypted_data)
+         for chunk_size in RangeAndRemainder(self.encrypted_data_size, self.BUFFER_SIZE):
+            self.read_decrypt_write(chunk_size, file_in, file_out)
+
+    def read_decrypt_write(self, chunk_size, file_in, file_out):
+        data = file_in.read(chunk_size)
+        decrypted_data = self.cipher.decrypt(data)
+        file_out.write(decrypted_data)
 
     def do_decryption(self):
         with open(self.output_filename, 'wb') as file_out, \
@@ -91,14 +91,12 @@ def RangeAndRemainder(whole, chunk):
     yield remainder
 
 
-import timeit
-
 # e = Encryptor(input_filename='requirements.txt', output_filename='t2.txt.encrypted')
-
 # de.do_decryption()
 
 if __name__ == '__main__':
     import timeit
+
     s = """
 de = Encryptor(input_filename='t2.txt', output_filename='t2.txt.encrypted')
 de.do_encryption()
