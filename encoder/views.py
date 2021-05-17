@@ -1,6 +1,7 @@
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 import json
+from Enkrypt import Dcryptor, Encryptor
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -63,11 +64,10 @@ def get_from_datastore(key):
 
 def save_data(bucket_name='zappa-encode', key='key', data='boom!'):
     now = datetime.now()
-    data = {
-        'message': data,
-        'created_at': str(now)
-    }
-    formatted_data = json.dumps(data)
+    enc = Encryptor(input_filename='tests.py', output_filename='tests.py.encrypted')
+    enc.do_encryption()
+    with open(file='tests.py.encrypted', mode='rb') as file:
+        formatted_data = file.read()
     s3 = S3Utils()
     s3.set_default_bucket(bucket_name=bucket_name)
     s3.create_object(key=key, content=formatted_data, bucket_name=bucket_name)

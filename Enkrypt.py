@@ -7,7 +7,7 @@ import os
 import io
 
 # see https://nitratine.net/blog/post/python-gcm-encryption-tutorial/
-
+from s3_wrapper import S3Utils
 
 
 class EncryptorBase:
@@ -107,7 +107,7 @@ class Dcryptor(EncryptorBase):
             self.read_file_in(file_in)
             self.read_and_output(file_in, file_out)
             self.verify(file_in)
-            return self.return_encryption(file_out)
+            return self.return_encryption(file_out).decode()
 
 
 def RangeAndRemainder(whole, chunk):
@@ -118,31 +118,75 @@ def RangeAndRemainder(whole, chunk):
     yield remainder
 
 
-e = Encryptor(input_string='testencrypt')
-v = e.do_encryption()
-print(v)
-d = Dcryptor(input_string=v)
-vv = d.do_decryption()
-print(vv)
+s3 = S3Utils()
+s3.set_default_bucket(bucket_name='zappa-encode')
 
-e = Encryptor(input_filename='t2.txt', output_filename='t2.txt.encrypted')
-e.do_encryption()
-de = Dcryptor(input_filename='t2.txt.encrypted', output_filename='t3.txt')
-de.do_decryption()
 
-if __name__ == 'xx__main__':
-    import timeit
+def encode_string_then_decode():
+    input_string = 'testencrypt'
+    encrpyted = Encryptor(input_string=input_string).do_encryption()
+    final_str = Dcryptor(input_string=encrpyted).do_decryption()
+    assert (input_string == final_str)
 
-    s = """
-de = Encryptor(input_filename='t2.txt', output_filename='t2.txt.encrypted')
-de.do_encryption()
-"""
-    ds = """
-de = Dcryptor(input_filename='t2.txt.encrypted', output_filename='t2.txt')
-de.do_decryption()
-"""
 
-    print(timeit.timeit(stmt=s, number=1000, setup="from __main__ import Encryptor"))
-    print(timeit.timeit(stmt=ds, number=1000, setup="from __main__ import Dcryptor"))
-# 0.28165610500000005
-# 0.4115074540000001
+encode_string_then_decode()
+
+
+def upload_downloader():
+    s3 = S3Utils()
+    s3.set_default_bucket(bucket_name='zappa-encode')
+    key = 'upload_download.txt'
+    s3.upload_file(key=key, file_path='t2.txt')
+    s3.download_file(key=key, file_path='t2_downloaded.txt')
+    with open('t2.txt', 'rb') as t2, open('t2_downloaded.txt', 'rb') as t2b:
+        assert (t2.read() == t2b.read())
+
+
+upload_downloader()
+
+
+def encode_string_upload_then_download():
+    input_string = b'testencrypt'
+    input_fn = 'src3.txt'
+    with open('%s' % input_fn, 'wb') as src:
+        src.write(input_string)
+    encrpyt3 = 'src3.txt.encrpyted'
+    Encryptor(input_filename=input_fn, output_filename=encrpyt3).do_encryption()
+    s3.upload_file(key=encrpyt3, file_path=encrpyt3)
+    file4 = 'downloadsrc3.txt.encrpyted'
+    s3.download_file(key=encrpyt3, file_path=file4)
+    with open(encrpyt3, 'rb') as t1, open(file4, 'rb') as t2:
+        t1b, t2b = t1.read(), t2.read()
+        assert (t1b == t2b)
+
+
+encode_string_upload_then_download()
+
+
+def encode_string_upload_then_download_then_decode():
+    input_string = b'testencrypt'
+    input_fn = 'src3.txt'
+    with open('%s' % input_fn, 'wb') as src:
+        src.write(input_string)
+    encrpyt3 = 'src3.txt.encrpyted'
+    Encryptor(input_filename=input_fn, output_filename=encrpyt3).do_encryption()
+    s3.upload_file(key=encrpyt3, file_path=encrpyt3)
+    file4 = 'downloadsrc4.txt.encrpyted'
+    file5_clear = 'file5_clear.txt'
+    s3.download_file(key=encrpyt3, file_path=file4)
+    Dcryptor(input_filename=file4, output_filename=file5_clear).do_decryption()
+    with open(file5_clear, 'rb') as t1, open(input_fn, 'rb') as t2:
+        t1b, t2b = t1.read(), t2.read()
+        assert (t1b == t2b)
+
+
+event = {'body': 'testencrypt', 'headers': {'Accept': '*/*', 'Accept-Encoding': 'gzip, deflate', 'Connection': 'keep-alive', 'Content-Length': '11', 'Host': '127.0.0.1:3000',
+                                            'User-Agent': 'python-requests/2.25.1', 'X-Forwarded-Port': '3000', 'X-Forwarded-Proto': 'http'}, 'httpMethod': 'POST', 'isBase64Encoded': False,
+         'multiValueHeaders': {'Accept': ['*/*'], 'Accept-Encoding': ['gzip, deflate'], 'Connection': ['keep-alive'], 'Content-Length': ['11'], 'Host': ['127.0.0.1:3000'],
+                               'User-Agent': ['python-requests/2.25.1'], 'X-Forwarded-Port': ['3000'], 'X-Forwarded-Proto': ['http']}, 'multiValueQueryStringParameters': None, 'path': '/hello',
+         'pathParameters': None, 'queryStringParameters': None,
+         'requestContext': {'accountId': '123456789012', 'apiId': '1234567890', 'domainName': '127.0.0.1:3000', 'extendedRequestId': None, 'httpMethod': 'POST',
+                            'identity': {'accountId': None, 'apiKey': None, 'caller': None, 'cognitoAuthenticationProvider': None, 'cognitoAuthenticationType': None, 'cognitoIdentityPoolId': None,
+                                         'sourceIp': '127.0.0.1', 'user': None, 'userAgent': 'Custom User Agent String', 'userArn': None}, 'path': '/hello', 'protocol': 'HTTP/1.1',
+                            'requestId': 'bab73187-bc8d-48b4-9d72-065886b23467', 'requestTime': '16/May/2021:11:37:04 +0000', 'requestTimeEpoch': 1621165024, 'resourceId': '123456',
+                            'resourcePath': '/hello', 'stage': 'Prod'}, 'resource': '/hello', 'stageVariables': None, 'version': '1.0'}
