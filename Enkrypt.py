@@ -136,9 +136,9 @@ def upload_downloader():
     s3 = S3Utils()
     s3.set_default_bucket(bucket_name='zappa-encode')
     key = 'upload_download.txt'
-    s3.upload_file(key=key, file_path='t2.txt')
+    s3.upload_file(key=key, file_path='src3.txt')
     s3.download_file(key=key, file_path='t2_downloaded.txt')
-    with open('t2.txt', 'rb') as t2, open('t2_downloaded.txt', 'rb') as t2b:
+    with open('src3.txt', 'rb') as t2, open('t2_downloaded.txt', 'rb') as t2b:
         assert (t2.read() == t2b.read())
 
 
