@@ -107,7 +107,7 @@ class Dcryptor(EncryptorBase):
             self.read_file_in(file_in)
             self.read_and_output(file_in, file_out)
             self.verify(file_in)
-            return self.return_encryption(file_out).decode()
+            return self.return_encryption(file_out)
 
 
 def RangeAndRemainder(whole, chunk):
@@ -125,7 +125,7 @@ s3.set_default_bucket(bucket_name='zappa-encode')
 def encode_string_then_decode():
     input_string = 'testencrypt'
     encrpyted = Encryptor(input_string=input_string).do_encryption()
-    final_str = Dcryptor(input_string=encrpyted).do_decryption()
+    final_str = Dcryptor(input_string=encrpyted).do_decryption().decode()
     assert (input_string == final_str)
 
 
@@ -190,3 +190,4 @@ event = {'body': 'testencrypt', 'headers': {'Accept': '*/*', 'Accept-Encoding': 
                                          'sourceIp': '127.0.0.1', 'user': None, 'userAgent': 'Custom User Agent String', 'userArn': None}, 'path': '/hello', 'protocol': 'HTTP/1.1',
                             'requestId': 'bab73187-bc8d-48b4-9d72-065886b23467', 'requestTime': '16/May/2021:11:37:04 +0000', 'requestTimeEpoch': 1621165024, 'resourceId': '123456',
                             'resourcePath': '/hello', 'stage': 'Prod'}, 'resource': '/hello', 'stageVariables': None, 'version': '1.0'}
+encode_string_upload_then_download_then_decode()
